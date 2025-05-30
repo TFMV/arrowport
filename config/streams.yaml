@@ -1,0 +1,24 @@
+streams:
+  # Example stream configuration for sensor data
+  sensor_readings:
+    target_table: sensor_data
+    chunk_size: 122880 # Aligned with DuckDB row group size
+    compression:
+      algorithm: zstd
+      level: 3
+
+  # Example stream configuration for log events
+  log_events:
+    target_table: system_logs
+    chunk_size: 245760 # Larger chunks for logs
+    compression:
+      algorithm: lz4
+      level: 6
+
+  # Example stream configuration for metrics
+  metrics:
+    target_table: metrics
+    chunk_size: 61440 # Smaller chunks for real-time metrics
+    compression:
+      algorithm: zstd
+      level: 1 # Faster compression for real-time data
