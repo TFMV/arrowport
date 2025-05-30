@@ -63,5 +63,7 @@ typing-inspection==0.4.1
     #   pydantic-settings
 uvicorn==0.34.2
     # via arrowport (pyproject.toml)
+watchdog==6.0.0
+    # via arrowport (pyproject.toml)
 zstandard==0.23.0
     # via arrowport (pyproject.toml)

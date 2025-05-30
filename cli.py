@@ -1,13 +1,11 @@
 import click
 import uvicorn
-import yaml
-from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 
 from .config.settings import settings
 from .config.streams import stream_config_manager
-
+from .constants import HTTP_200_OK
 
 console = Console()
 
@@ -58,8 +56,8 @@ def streams():
 @click.argument("arrow_file", type=click.Path(exists=True))
 def ingest(stream_name, arrow_file):
     """Ingest an Arrow IPC file into a stream 📥"""
-    import requests
     import pyarrow as pa
+    import requests
 
     # Read the Arrow file
     with pa.memory_map(arrow_file, "rb") as source:
@@ -91,13 +89,11 @@ def ingest(stream_name, arrow_file):
         },
     )
 
-    if response.status_code == 200:
+    if response.status_code == HTTP_200_OK:
         result = response.json()
-        console.print(
-            f"[green]Successfully ingested {result['rows_processed']} rows[/green]"
-        )
+        console.print(f"Successfully processed stream: {result['rows_processed']} rows")
     else:
-        console.print(f"[red]Error: {response.text}[/red]")
+        console.print(f"Error: {response.text}", style="red")
 
 
 if __name__ == "__main__":

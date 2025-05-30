@@ -1,37 +1,63 @@
-import pytest
+"""Tests for API endpoints."""
+
+import base64
+
 import pyarrow as pa
-from ..models.arrow import ArrowBatch, ArrowStreamConfig
+import pytest
+from arrowport.api.app import app
+from arrowport.constants import (
+    HTTP_200_OK,
+    HTTP_404_NOT_FOUND,
+    HTTP_500_INTERNAL_SERVER_ERROR,
+)
+from arrowport.models.arrow import ArrowStreamConfig
+from fastapi.testclient import TestClient
+
+# Test constants
+TEST_ROW_COUNT = 3
 
 
-def test_process_stream_success(test_client, sample_arrow_table):
-    """Test successful stream processing."""
-    # Prepare the request data
+@pytest.fixture
+def test_client():
+    """Create a test client."""
+    return TestClient(app)
+
+
+def test_process_stream(test_client, sample_table):
+    """Test stream processing endpoint."""
+    # Convert table to IPC format
     sink = pa.BufferOutputStream()
-    writer = pa.ipc.new_stream(sink, sample_arrow_table.schema)
-    writer.write_table(sample_arrow_table)
+    writer = pa.ipc.new_stream(sink, sample_table.schema)
+    writer.write_table(sample_table)
     writer.close()
 
+    # Create request data
     config = ArrowStreamConfig(
         target_table="test_table",
         chunk_size=1000,
         compression={"algorithm": "zstd", "level": 3},
     )
 
+    # Send request
     response = test_client.post(
         "/stream/test_stream",
         json={
             "config": config.model_dump(),
             "batch": {
-                "schema": sample_arrow_table.schema.to_dict(),
-                "data": sink.getvalue().to_pybytes(),
+                "arrow_schema": base64.b64encode(
+                    sample_table.schema.serialize()
+                ).decode("utf-8"),
+                "data": base64.b64encode(sink.getvalue().to_pybytes()).decode("utf-8"),
             },
         },
     )
 
-    assert response.status_code == 200
+    # Verify response
+    assert response.status_code == HTTP_200_OK
     data = response.json()
     assert data["status"] == "success"
-    assert data["rows_processed"] == 5
+    assert data["stream"] == "test_stream"
+    assert data["rows_processed"] == TEST_ROW_COUNT
 
 
 def test_process_stream_invalid_data(test_client):
@@ -39,20 +65,25 @@ def test_process_stream_invalid_data(test_client):
     response = test_client.post(
         "/stream/test_stream",
         json={
-            "config": {"target_table": "test_table"},
-            "batch": {"schema": {}, "data": b"invalid data"},
+            "config": {
+                "target_table": "test_table",
+                "chunk_size": 1000,
+            },
+            "batch": {
+                "arrow_schema": "invalid",
+                "data": "invalid",
+            },
         },
     )
-
-    assert response.status_code == 422
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
 
 
 def test_metrics_endpoint(test_client, test_settings):
     """Test metrics endpoint if enabled."""
     if test_settings.enable_metrics:
         response = test_client.get("/metrics")
-        assert response.status_code == 200
+        assert response.status_code == HTTP_200_OK
         assert "arrowport_" in response.text
     else:
         response = test_client.get("/metrics")
-        assert response.status_code == 404
+        assert response.status_code == HTTP_404_NOT_FOUND

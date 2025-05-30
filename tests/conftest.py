@@ -1,31 +1,34 @@
+"""Test configuration and fixtures."""
+
 import os
-import pytest
 import tempfile
-from pathlib import Path
-import duckdb
+
 import pyarrow as pa
+import pytest
+from arrowport.api.app import app
+from arrowport.config.settings import Settings
+from arrowport.core.db import DuckDBManager
 from fastapi.testclient import TestClient
 
-from ..api.app import app
-from ..core.db import DuckDBManager
-from ..config.settings import Settings
-from ..config.streams import StreamConfigManager
+
+@pytest.fixture
+def test_client():
+    """Create a FastAPI test client."""
+    return TestClient(app)
 
 
 @pytest.fixture
 def test_settings():
-    """Test settings with temporary paths."""
+    """Create test settings with temporary paths."""
     with tempfile.TemporaryDirectory() as temp_dir:
         db_path = os.path.join(temp_dir, "test.duckdb")
-        config_path = os.path.join(temp_dir, "streams.yaml")
-
         settings = Settings(
             db_path=db_path,
             api_host="127.0.0.1",
             api_port=8889,
             enable_metrics=False,
         )
-        return settings
+        yield settings
 
 
 @pytest.fixture
@@ -36,13 +39,6 @@ def test_db(test_settings):
     db.close()
     if os.path.exists(test_settings.db_path):
         os.remove(test_settings.db_path)
-
-
-@pytest.fixture
-def test_client(test_settings):
-    """Test FastAPI client."""
-    with TestClient(app) as client:
-        yield client
 
 
 @pytest.fixture
@@ -68,3 +64,10 @@ def stream_config():
             }
         }
     }
+
+
+@pytest.fixture
+def sample_table():
+    """Create a sample Arrow table for testing."""
+    data = {"a": [1, 2, 3], "b": ["foo", "bar", "baz"]}
+    return pa.Table.from_pydict(data)
