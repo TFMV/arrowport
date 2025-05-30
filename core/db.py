@@ -1,67 +1,35 @@
-"""DuckDB connection and transaction management."""
+"""DuckDB connection management."""
 
-from collections.abc import Generator
-from contextlib import contextmanager
+import contextlib
+from typing import Iterator
 
 import duckdb
 import pyarrow as pa
+import structlog
 
-from ..config.settings import settings
+logger = structlog.get_logger()
 
 
 class DuckDBManager:
-    """Manages DuckDB connections and transactions."""
+    """DuckDB connection manager."""
 
-    def __init__(self, db_path: str):
-        """Initialize DuckDB manager.
-
-        Args:
-            db_path: Path to DuckDB database file
-        """
-        self.db_path = db_path
+    def __init__(self, database: str = ":memory:") -> None:
+        """Initialize the DuckDB manager."""
+        self._database = database
         self._conn = None
 
-    @property
-    def conn(self) -> duckdb.DuckDBPyConnection:
-        """Get or create DuckDB connection."""
+    @contextlib.contextmanager
+    def get_connection(self) -> Iterator[duckdb.DuckDBPyConnection]:
+        """Get a DuckDB connection."""
         if self._conn is None:
-            self._conn = duckdb.connect(self.db_path)
+            self._conn = duckdb.connect(self._database)
             self._conn.install_extension("arrow")
             self._conn.load_extension("arrow")
-        return self._conn
-
-    @contextmanager
-    def transaction(self) -> Generator[duckdb.DuckDBPyConnection, None, None]:
-        """Context manager for DuckDB transactions."""
         try:
-            self.conn.begin()
-            yield self.conn
-            self.conn.commit()
-        except Exception:
-            self.conn.rollback()
+            yield self._conn
+        except Exception as e:
+            logger.error("DuckDB operation failed", error=str(e))
             raise
-
-    def import_arrow(
-        self,
-        table: pa.Table,
-        target_table: str,
-        mode: str = "create",
-    ) -> None:
-        """Import Arrow table into DuckDB.
-
-        Args:
-            table: PyArrow table to import
-            target_table: Name of target table in DuckDB
-            mode: Import mode ('create' or 'append')
-        """
-        with self.transaction() as conn:
-            if mode == "create":
-                conn.execute(f"DROP TABLE IF EXISTS {target_table}")
-                conn.execute(
-                    f"CREATE TABLE {target_table} AS SELECT * FROM arrow_table"
-                )
-            else:
-                conn.execute(f"INSERT INTO {target_table} SELECT * FROM arrow_table")
 
     def close(self) -> None:
         """Close the DuckDB connection."""
@@ -69,6 +37,47 @@ class DuckDBManager:
             self._conn.close()
             self._conn = None
 
+    @contextlib.contextmanager
+    def transaction(self) -> Iterator[duckdb.DuckDBPyConnection]:
+        """Context manager for DuckDB transactions."""
+        with self.get_connection() as conn:
+            try:
+                conn.begin()
+                yield conn
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                raise e
 
-# Create global database manager instance
-db_manager = DuckDBManager(settings.db_path)
+    def register_arrow(self, table_name: str, table: pa.Table) -> None:
+        """Register an Arrow table with DuckDB."""
+        with self.transaction() as conn:
+            # Create table from Arrow schema
+            schema_sql = []
+            for field in table.schema:
+                sql_type = {
+                    pa.int8(): "TINYINT",
+                    pa.int16(): "SMALLINT",
+                    pa.int32(): "INTEGER",
+                    pa.int64(): "BIGINT",
+                    pa.float32(): "REAL",
+                    pa.float64(): "DOUBLE",
+                    pa.string(): "VARCHAR",
+                    pa.bool_(): "BOOLEAN",
+                    pa.timestamp("ns"): "TIMESTAMP",
+                }.get(field.type, "VARCHAR")
+                schema_sql.append(f"{field.name} {sql_type}")
+
+            create_sql = (
+                f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(schema_sql)})"
+            )
+            conn.execute(create_sql)
+
+            # Register Arrow table and insert data
+            conn.register("_temp_arrow", table)
+            conn.execute(f"INSERT INTO {table_name} SELECT * FROM _temp_arrow")
+            conn.unregister("_temp_arrow")
+
+
+# Create global DuckDB manager instance
+db_manager = DuckDBManager()
