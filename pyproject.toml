@@ -1,40 +1,48 @@
 [tool.poetry]
 name = "arrowport"
 version = "0.1.0"
-description = "A high-performance bridge from Arrow IPC streams to DuckDB"
+description = "High-performance bridge from Arrow IPC streams to DuckDB"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
+packages = [{ include = "arrowport" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-fastapi = "^0.109.0"
-uvicorn = "^0.27.0"
-pydantic = "^2.6.0"
-pydantic-settings = "^2.1.0"
-pyarrow = "^15.0.0"
-duckdb = "^0.10.0"
-python-multipart = "^0.0.9"
-prometheus-client = "^0.19.0"
-structlog = "^24.1.0"
-watchdog = "^3.0.0"
-pyyaml = "^6.0.1"
+duckdb = "^1.3.0"
+pyarrow = "^20.0.0"
+fastapi = "^0.115.12"
+uvicorn = "^0.34.2"
+pydantic = "^2.11.5"
+pydantic-settings = "^2.9.1"
+structlog = "^25.3.0"
+prometheus-client = "^0.22.0"
+rich = "^14.0.0"
+click = "^8.2.1"
+PyYAML = "^6.0.2"
+python-multipart = "^0.0.20"
+zstandard = "^0.23.0"
+lz4 = "^4.4.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
-pytest-asyncio = "^0.23.0"
+pytest-asyncio = "^0.23.5"
 pytest-cov = "^4.1.0"
 black = "^24.1.0"
 isort = "^5.13.0"
 mypy = "^1.8.0"
 ruff = "^0.2.0"
+pre-commit = "^3.6.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.scripts]
+arrowport = "arrowport.cli:cli"
+
 [tool.black]
 line-length = 88
-target-version = ["py39"]
+target-version = ['py39']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -48,8 +56,13 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 check_untyped_defs = true
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "--cov=arrowport --cov-report=term-missing -v"
+
 [tool.ruff]
-select = ["E", "F", "B", "I"]
-ignore = []
 line-length = 88
 target-version = "py39"
+select = ["E", "F", "B", "I", "N", "UP", "PL", "RUF"]
