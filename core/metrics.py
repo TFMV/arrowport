@@ -1,6 +1,6 @@
 """Prometheus metrics for Arrowport."""
 
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 # Stream processing metrics
 STREAM_ROWS_TOTAL = Counter(

@@ -1,6 +1,6 @@
-from typing import Any, Callable, Optional
 import asyncio
-from functools import partial
+from typing import Any, Callable
+
 import structlog
 from prometheus_client import Counter, Histogram
 

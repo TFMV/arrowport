@@ -2,8 +2,6 @@
 
 *Where Arrow streams land gracefully in DuckDB ponds* 🦆
 
-> Status: Early Development.
-
 ## What is Arrowport? 🤔
 
 Arrowport is a high-performance bridge that helps Arrow data streams find their way into DuckDB's cozy data ponds. Think of it as a friendly air traffic controller for your data - it ensures your Arrow packets land safely, efficiently, and in the right spot!
@@ -14,148 +12,264 @@ Arrowport is a high-performance bridge that helps Arrow data streams find their 
 
 ## Features 🌟
 
-- **Zero-Copy Landing** 🛬
-  - Your data touches down without unnecessary copies
-  - Native Arrow → DuckDB pathways
-  - As smooth as a duck gliding on water
+- **High-Performance Data Transfer**: Direct Arrow IPC stream ingestion into DuckDB
+- **Native Compression Support**: ZSTD compression for Arrow IPC streams
+- **RESTful API**: FastAPI-based endpoints for data ingestion
+- **Prometheus Metrics**: Optional metrics endpoint for monitoring
+- **Transaction Support**: Atomic operations for data consistency
+- **Configurable**: Flexible configuration for compression, chunk sizes, and more
 
-- **Compression Options** 🗜️
-  - ZSTD for the storage-conscious
-  - LZ4 for the speed demons
-  - Configure per stream, because one size doesn't fit all!
+## Installation
 
-- **Hot-Reloadable Config** 🔥
-  - Change routes mid-flight
-  - No restart required
-  - YAML-based for human happiness
+### Prerequisites
 
-- **Prometheus Metrics** 📊
-  - Watch your data flow
-  - Track your landings
-  - Monitor your pond health
+- Python 3.9 or higher
+- DuckDB 1.3.0 or higher
+- PyArrow 20.0.0 or higher
+
+### Using pip
+
+```bash
+pip install arrowport
+```
+
+### From Source
+
+```bash
+git clone https://github.com/yourusername/arrowport.git
+cd arrowport
+uv pip install -e .
+```
 
 ## Quick Start 🚀
 
-1. **Install Arrowport:**
+1. **Start the Arrowport server:**
 
 ```bash
-pip install arrowport  # Coming soon to PyPI!
-# For now:
-git clone https://github.com/yourusername/arrowport.git
-cd arrowport
-poetry install
+arrowport serve
 ```
 
-2. **Create a stream config:**
-
-```yaml
-streams:
-  sensor_readings:
-    target_table: sensor_data
-    compression:
-      algorithm: zstd
-      level: 3  # Balanced, like a duck on one leg
-```
-
-3. **Launch the server:**
-
-```bash
-python -m arrowport
-```
-
-4. **Send some data:**
+2. **Send data using Python:**
 
 ```python
 import pyarrow as pa
 import requests
+import base64
 
-# Prepare your Arrow data
-table = pa.table(...)
+# Create sample data
+data = pa.table({'a': [1, 2, 3], 'b': ['foo', 'bar', 'baz']})
 
-# Send it to Arrowport
+# Convert to IPC format
 sink = pa.BufferOutputStream()
-writer = pa.ipc.new_stream(sink, table.schema)
-writer.write_table(table)
+writer = pa.ipc.new_stream(sink, data.schema)
+writer.write_table(data)
 writer.close()
 
-requests.post(
-    "http://localhost:8888/stream/sensor_readings",
-    data=sink.getvalue().to_pybytes()
+# Send to Arrowport
+response = requests.post(
+    "http://localhost:8000/stream/my_stream",
+    json={
+        "config": {
+            "target_table": "my_table",
+            "compression": {"algorithm": "zstd", "level": 3}
+        },
+        "batch": {
+            "arrow_schema": base64.b64encode(data.schema.serialize()).decode(),
+            "data": base64.b64encode(sink.getvalue().to_pybytes()).decode()
+        }
+    }
 )
 ```
 
-## Why Arrowport? 🎯
+## Configuration ��️
 
-Because getting data from A(rrow) to D(uckDB) shouldn't require a PhD in data engineering! We handle the complexities of:
-
-- Schema inference
-- Transaction management
-- Batch processing
-- Error recovery
-- Performance monitoring
-
-All while keeping it as simple as feeding bread to ducks! 🦆🍞
-
-## Configuration 🛠️
-
-Arrowport is as configurable as a Swiss Army knife, but with sensible defaults that work out of the box. Here's a taste:
+Configuration is handled through environment variables or a YAML file:
 
 ```yaml
-# config/streams.yaml
-streams:
-  metrics:
-    target_table: metrics
-    chunk_size: 61440  # Smaller chunks for real-time data
-    compression:
-      algorithm: zstd
-      level: 1  # Speed over size for metrics
+# config.yaml
+api:
+  host: "127.0.0.1"
+  port: 8000
+  enable_metrics: true
+  metrics_port: 9090
 
-  logs:
-    target_table: system_logs
-    chunk_size: 245760  # Larger chunks for logs
-    compression:
-      algorithm: lz4
-      level: 6  # Balance is key
+duckdb:
+  path: "data/db.duckdb"
+  
+compression:
+  algorithm: "zstd"
+  level: 3
+
+defaults:
+  chunk_size: 10000
 ```
 
-## Performance 🏃‍♂️
+Environment variables take precedence over the config file:
 
-Arrowport is built for speed:
+```bash
+export ARROWPORT_API_HOST="0.0.0.0"
+export ARROWPORT_API_PORT=8888
+export ARROWPORT_ENABLE_METRICS=true
+```
 
-- Zero-copy data transfer where possible
-- Efficient compression options
-- Background processing with retries
-- Transaction-based writes
+## API Reference
 
-Think of it as a duck: calm and graceful on the surface, but paddling efficiently underneath! 🦆💨
+### POST /stream/{stream_name}
 
-## Monitoring 📊
+Process an Arrow IPC stream and load it into DuckDB.
 
-Keep an eye on your data flow with built-in Prometheus metrics:
+**Parameters**:
 
-- Request rates
-- Processing times
-- Error counts
-- Resource usage
+- `stream_name`: Identifier for the stream (string)
 
-All accessible via `/metrics` - because observability shouldn't be an afterthought!
+**Request Body**:
 
-## Contributing 🤝
+```json
+{
+  "config": {
+    "target_table": "string",
+    "chunk_size": 10000,
+    "compression": {
+      "algorithm": "zstd",
+      "level": 3
+    }
+  },
+  "batch": {
+    "arrow_schema": "base64-encoded Arrow schema",
+    "data": "base64-encoded Arrow IPC stream"
+  }
+}
+```
 
-We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation, we'd love to have you aboard.
+**Response**:
 
-Check out our [Contributing Guide](CONTRIBUTING.md) to get started.
+```json
+{
+  "status": "success",
+  "stream": "stream_name",
+  "rows_processed": 1000,
+  "message": "Data processed successfully"
+}
+```
 
-## License 📜
+### GET /metrics
 
-Arrowport is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Prometheus metrics endpoint (if enabled).
 
-## Acknowledgments 🙏
+## Architecture
 
-Special thanks to:
+Arrowport is built on modern Python technologies:
 
-- The DuckDB team for their amazing database
-- The Apache Arrow project for their fantastic format
-- All the open source projects that make this possible
+- **FastAPI**: High-performance web framework
+- **DuckDB**: Embedded analytical database
+- **PyArrow**: Apache Arrow implementation for Python
+- **Pydantic**: Data validation using Python type annotations
+- **Structlog**: Structured logging
+- **Prometheus Client**: Metrics collection and exposure
+
+The system follows a modular architecture:
+
+```
+arrowport/
+├── api/          # FastAPI application and endpoints
+├── core/         # Core functionality (Arrow, DuckDB)
+├── config/       # Configuration management
+├── models/       # Pydantic models
+└── utils/        # Utility functions
+```
+
+### Data Flow
+
+1. Client sends Arrow IPC stream with schema
+2. API endpoint validates request and configuration
+3. Arrow stream is written to temporary file
+4. DuckDB reads the Arrow stream directly using `read_arrow`
+5. Data is inserted into target table in a transaction
+6. Response is sent with processing status
+
+## Development
+
+### Setting Up Development Environment
+
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+uv pip install -r requirements.txt
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+python -m pytest
+
+# Run with coverage
+python -m pytest --cov=arrowport
+
+# Run specific test file
+python -m pytest tests/test_api.py
+```
+
+### Code Style
+
+The project uses:
+
+- Black for code formatting
+- isort for import sorting
+- Ruff for linting
+- MyPy for type checking
+
+Run formatters:
+
+```bash
+black .
+isort .
+```
+
+## Performance Considerations
+
+- Uses DuckDB's native Arrow support for zero-copy data transfer
+- ZSTD compression for efficient network transfer
+- Configurable chunk sizes for memory management
+- Transaction support for data consistency
+
+## Contributing
+
+We welcome contributions! Here's how you can help:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests and linting:
+
+   ```bash
+   # Run all checks
+   python -m pytest
+   black .
+   isort .
+   ruff check .
+   mypy .
+   ```
+
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Submit a pull request
+
+## License
+
+MIT License
+
+## Acknowledgments
+
+- [DuckDB team](https://duckdb.org/) for their excellent Arrow integration and support
+- [FastAPI team](https://fastapi.tiangolo.com/) for the high-performance framework
+- [Apache Arrow team](https://arrow.apache.org/) for the columnar format
+- All our contributors and users who make this project better every day
 
 ---

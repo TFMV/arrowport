@@ -1,68 +1,70 @@
-from typing import Optional, List
-from pydantic import BaseModel, Field, validator
-import pyarrow as pa
+"""Arrow data models."""
 
-from ..config.settings import settings
+import base64
+from typing import Any, Optional
+
+import pyarrow as pa
+from pydantic import BaseModel, Field, field_validator
+
+from ..constants import LZ4_MAX_LEVEL, ZSTD_MAX_LEVEL
 
 
 class ArrowStreamConfig(BaseModel):
-    """Configuration for Arrow IPC stream processing."""
+    """Configuration for an Arrow stream."""
 
-    target_table: str = Field(..., description="Target table name in DuckDB")
-    chunk_size: Optional[int] = Field(
-        default=settings.default_chunk_size,
-        description="Chunk size for processing Arrow IPC stream",
-    )
-    compression: Optional[dict] = Field(
-        default_factory=lambda: {
-            "algorithm": settings.compression_algorithm,
-            "level": settings.compression_level,
-        },
-        description="Compression settings for Arrow IPC stream",
+    target_table: str = Field(..., description="Target table in DuckDB")
+    chunk_size: int = Field(default=10000, description="Chunk size for processing")
+    compression: Optional[dict[str, Any]] = Field(
+        default=None, description="Compression settings"
     )
 
-    @validator("compression")
-    def validate_compression(cls, v):
+    @field_validator("compression")
+    @classmethod
+    def validate_compression(
+        cls, v: Optional[dict[str, Any]]
+    ) -> Optional[dict[str, Any]]:
         """Validate compression settings."""
         if v is None:
-            return v
+            return None
 
-        algorithm = v.get("algorithm", "").lower()
-        level = v.get("level", 0)
+        algorithm = v.get("algorithm")
+        level = v.get("level", 1)
 
         if algorithm not in ["zstd", "lz4"]:
             raise ValueError("Compression algorithm must be either 'zstd' or 'lz4'")
 
-        if algorithm == "zstd" and not 1 <= level <= 9:
-            raise ValueError("ZSTD compression level must be between 1 and 9")
-        elif algorithm == "lz4" and not 1 <= level <= 12:
-            raise ValueError("LZ4 compression level must be between 1 and 12")
+        if algorithm == "zstd" and not 1 <= level <= ZSTD_MAX_LEVEL:
+            raise ValueError(
+                f"ZSTD compression level must be between 1 and {ZSTD_MAX_LEVEL}"
+            )
+        elif algorithm == "lz4" and not 1 <= level <= LZ4_MAX_LEVEL:
+            raise ValueError(
+                f"LZ4 compression level must be between 1 and {LZ4_MAX_LEVEL}"
+            )
 
         return v
 
 
 class ArrowBatch(BaseModel):
-    """Represents a batch of data in Arrow IPC format."""
+    """Arrow IPC batch data."""
 
-    schema: dict = Field(..., description="Arrow schema as JSON")
-    data: bytes = Field(..., description="Arrow IPC format data")
+    arrow_schema: str = Field(..., description="Base64-encoded Arrow schema")
+    data: str = Field(..., description="Base64-encoded Arrow IPC stream")
 
     def to_arrow_table(self) -> pa.Table:
-        """Convert the batch to an Arrow Table."""
+        """Convert the batch data to an Arrow table."""
         try:
-            # Reconstruct the schema
-            schema = pa.Schema.from_dict(self.schema)
-            # Read the IPC stream
-            reader = pa.ipc.open_stream(pa.py_buffer(self.data))
+            data_bytes = base64.b64decode(self.data)
+            reader = pa.ipc.open_stream(pa.py_buffer(data_bytes))
             table = reader.read_all()
             return table
         except Exception as e:
-            raise ValueError(f"Failed to convert to Arrow Table: {str(e)}")
+            raise ValueError(f"Failed to convert to Arrow Table: {e!s}") from e
 
 
 class StreamResponse(BaseModel):
-    """Response model for stream processing operations."""
+    """Response for stream processing."""
 
-    status: str = Field(..., description="Status of the operation")
+    status: str = Field(..., description="Processing status")
+    stream: str = Field(..., description="Stream name")
     rows_processed: int = Field(..., description="Number of rows processed")
-    message: Optional[str] = Field(None, description="Additional information")
