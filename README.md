@@ -35,7 +35,12 @@ pip install arrowport
 ```bash
 git clone https://github.com/yourusername/arrowport.git
 cd arrowport
+
+# Using uv (recommended for faster installs)
 uv pip install -e .
+
+# Or using traditional pip
+pip install -e .
 ```
 
 ## Quick Start 🚀
@@ -153,6 +158,22 @@ Process an Arrow IPC stream and load it into DuckDB.
 
 Prometheus metrics endpoint (if enabled).
 
+Example metrics:
+
+```
+# Total rows processed by stream
+arrowport_rows_processed_total{stream="example"} 1000
+
+# Ingest latency histogram
+arrowport_ingest_latency_seconds_bucket{le="0.1",stream="example"} 42
+arrowport_ingest_latency_seconds_bucket{le="0.5",stream="example"} 197
+arrowport_ingest_latency_seconds_bucket{le="1.0",stream="example"} 365
+
+# Active connections
+arrowport_active_connections{protocol="flight"} 5
+arrowport_active_connections{protocol="rest"} 3
+```
+
 ## Architecture
 
 Arrowport is built on modern Python technologies:
@@ -238,6 +259,9 @@ isort .
 
 ## Performance Benchmarks
 
+> 📊 **Note**: For detailed benchmarks including system specifications, raw data, and
+> reproducibility instructions, see [docs/benchmarks.md](docs/benchmarks.md)
+
 Recent benchmarks show impressive performance characteristics across different data sizes:
 
 ### Small Dataset (1,000 rows)
@@ -266,7 +290,11 @@ Recent benchmarks show impressive performance characteristics across different d
 
 ### Key Findings
 
-1. **Arrow Flight Performance**: The Flight server shows exceptional performance for larger datasets, reaching nearly 20M rows/second for 1M rows.
+1. **Arrow Flight Performance**: The Flight server shows exceptional performance for larger datasets, reaching nearly 20M rows/second for 1M rows. This is achieved because Arrow Flight:
+   - Avoids HTTP parsing and JSON serialization overhead
+   - Streams binary Arrow data directly over gRPC
+   - Uses pre-negotiated schemas for efficient data transfer
+   - Leverages zero-copy optimizations where possible
 2. **ZSTD Compression Benefits**: ZSTD compression significantly improves REST API performance, especially for smaller datasets.
 3. **Scalability**: Both implementations scale well, but Flight's zero-copy approach provides substantial advantages at scale.
 4. **Use Case Recommendations**:
