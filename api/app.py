@@ -87,34 +87,25 @@ async def process_stream(
             rows=rows_count,
         )
 
-        # Create a temporary file to store the Arrow IPC stream
-        with tempfile.NamedTemporaryFile(suffix=".arrows") as temp_file:
-            # Write the table to Arrow IPC format
-            stream = ArrowStream(
-                compression=(
-                    config.compression["algorithm"] if config.compression else None
-                ),
-                compression_level=(
-                    config.compression["level"] if config.compression else None
-                ),
-            )
-            stream.write_table(table, temp_file.name)
+        # Process the batch in a transaction
+        with db_manager.transaction() as conn:
+            # Create table if it doesn't exist using the Arrow table schema
+            conn.register(
+                "arrow_schema_table", table.slice(0, 0)
+            )  # Empty table for schema
+            create_table_sql = f"""
+            CREATE TABLE IF NOT EXISTS {config.target_table} AS 
+            SELECT * FROM arrow_schema_table LIMIT 0
+            """
+            conn.execute(create_table_sql)
 
-            # Process the batch in a transaction
-            with db_manager.transaction() as conn:
-                # Create table if it doesn't exist
-                create_table_sql = f"""
-                CREATE TABLE IF NOT EXISTS {config.target_table} AS 
-                SELECT * FROM read_arrow('{temp_file.name}') LIMIT 0
-                """
-                conn.execute(create_table_sql)
-
-                # Insert data using DuckDB's read_arrow function
-                insert_sql = f"""
-                INSERT INTO {config.target_table} 
-                SELECT * FROM read_arrow('{temp_file.name}')
-                """
-                conn.execute(insert_sql)
+            # Register the full table and insert data
+            conn.register("arrow_table", table)
+            insert_sql = f"""
+            INSERT INTO {config.target_table} 
+            SELECT * FROM arrow_table
+            """
+            conn.execute(insert_sql)
 
         logger.info(
             "Successfully processed Arrow IPC stream",
