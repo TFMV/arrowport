@@ -1,5 +1,10 @@
 # 🏹 Arrowport
 
+[![PyPI version](https://badge.fury.io/py/arrowport.svg)](https://badge.fury.io/py/arrowport)
+[![Python Versions](https://img.shields.io/pypi/pyversions/arrowport.svg)](https://pypi.org/project/arrowport/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Development Status](https://img.shields.io/pypi/status/arrowport.svg)](https://pypi.org/project/arrowport/)
+
 *Where Arrow streams land gracefully in DuckDB ponds* 🦆
 
 ## What is Arrowport? 🤔
