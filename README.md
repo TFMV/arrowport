@@ -203,12 +203,72 @@ arrowport/
 
 ### Data Flow
 
-1. Client sends Arrow IPC stream with schema
-2. API endpoint validates request and configuration
-3. Arrow stream is written to temporary file
-4. DuckDB reads the Arrow stream directly using `read_arrow`
-5. Data is inserted into target table in a transaction
-6. Response is sent with processing status
+1. **Client Sends Data**: Two protocols are supported:
+
+   a) **REST API**:
+
+   ```python
+   # Client serializes Arrow table and sends as base64-encoded IPC stream
+   sink = pa.BufferOutputStream()
+   writer = pa.ipc.new_stream(sink, table.schema)
+   writer.write_table(table)
+   
+   response = requests.post(
+       "http://localhost:8000/stream/my_stream",
+       json={
+           "config": {
+               "target_table": "my_table",
+               "compression": {"algorithm": "zstd", "level": 3}
+           },
+           "batch": {
+               "arrow_schema": base64.b64encode(table.schema.serialize()).decode(),
+               "data": base64.b64encode(sink.getvalue().to_pybytes()).decode()
+           }
+       }
+   )
+   ```
+
+   b) **Arrow Flight**:
+
+   ```python
+   # Client connects directly using Arrow Flight protocol
+   client = flight.FlightClient("grpc://localhost:8889")
+   descriptor = flight.FlightDescriptor.for_command(
+       json.dumps({"stream_name": "my_stream"}).encode()
+   )
+   writer, _ = client.do_put(descriptor, table.schema)
+   writer.write_table(table)
+   writer.close()
+   ```
+
+2. **Server Processing**:
+
+   a) **REST API Path**:
+   - Decodes base64 Arrow schema and data
+   - Converts to Arrow Table using `ArrowBatch.to_arrow_table()`
+   - Uses DuckDB transaction for atomic operations
+   - Creates target table if needed using Arrow schema
+   - Registers Arrow table with DuckDB for zero-copy transfer
+   - Executes INSERT using registered table
+
+   b) **Flight Path**:
+   - Receives Arrow data directly via gRPC
+   - Reads complete table using `reader.read_all()`
+   - Gets stream configuration for target table
+   - Uses DuckDB's native Arrow registration for zero-copy transfer
+   - Executes INSERT in a single operation
+
+3. **DuckDB Integration**:
+   - Zero-copy data transfer using `register_arrow()`
+   - Automatic schema mapping from Arrow to DuckDB types
+   - Transaction-safe data loading
+   - Proper cleanup and unregistration of temporary tables
+
+4. **Response Handling**:
+   - REST API returns JSON with rows processed and status
+   - Flight protocol completes the put operation
+   - Both methods include proper error handling and logging
+   - Metrics are collected for monitoring (if enabled)
 
 ## Development
 
