@@ -35,20 +35,30 @@ def serve(host, port, reload):
 @cli.command()
 def streams():
     """List configured streams 📋"""
-    table = Table(title="Configured Streams")
-    table.add_column("Stream Name", style="cyan")
-    table.add_column("Target Table", style="green")
-    table.add_column("Chunk Size", justify="right", style="yellow")
-    table.add_column("Compression", style="magenta")
+    try:
+        config = stream_config_manager._configs
+        if not config:
+            console.print("[yellow]No streams configured[/yellow]")
+            return
 
-    config = stream_config_manager._config
-    for name, stream in config.streams.items():
-        compression = (
-            f"{stream.compression['algorithm']} (level {stream.compression['level']})"
-        )
-        table.add_row(name, stream.target_table, str(stream.chunk_size), compression)
+        table = Table(title="Configured Streams")
+        table.add_column("Name", style="cyan")
+        table.add_column("Type", style="green")
+        table.add_column("Path", style="blue")
+        table.add_column("Compression", style="magenta")
 
-    console.print(table)
+        for name, stream in config.items():
+            table.add_row(
+                name,
+                stream.get("type", "unknown"),
+                stream.get("path", "N/A"),
+                stream.get("compression", "none"),
+            )
+
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Error listing streams: {str(e)}[/red]")
+        raise click.Abort()
 
 
 @cli.command()
