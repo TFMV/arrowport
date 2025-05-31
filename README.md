@@ -33,7 +33,7 @@ pip install arrowport
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/arrowport.git
+git clone https://github.com/TFMV/arrowport.git
 cd arrowport
 
 # Using uv (recommended for faster installs)
