@@ -4,6 +4,8 @@ import base64
 
 import pyarrow as pa
 import pytest
+from fastapi.testclient import TestClient
+
 from arrowport.api.app import app
 from arrowport.constants import (
     HTTP_200_OK,
@@ -11,7 +13,6 @@ from arrowport.constants import (
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 from arrowport.models.arrow import ArrowStreamConfig
-from fastapi.testclient import TestClient
 
 # Test constants
 TEST_ROW_COUNT = 3

@@ -1,6 +1,5 @@
 """Basic tests for Arrowport."""
 
-
 from arrowport import __version__
 
 

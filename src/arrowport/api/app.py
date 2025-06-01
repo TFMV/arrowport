@@ -1,7 +1,7 @@
 """FastAPI application for Arrowport."""
 
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 import structlog
 from fastapi import FastAPI, HTTPException, Query
@@ -11,15 +11,9 @@ from prometheus_client import make_asgi_app
 
 from ..config.settings import settings
 from ..constants import HTTP_500_INTERNAL_SERVER_ERROR
-from ..core.arrow import ArrowStream
 from ..core.db import db_manager
 from ..core.storage import get_storage_backend
-from ..models.arrow import (
-    ArrowBatch,
-    ArrowStreamConfig,
-    DeltaTableInfo,
-    StreamResponse,
-)
+from ..models.arrow import ArrowBatch, ArrowStreamConfig, DeltaTableInfo, StreamResponse
 
 # Configure structured logging
 logger = structlog.get_logger()
@@ -151,8 +145,6 @@ async def ingest_to_delta(
     """Ingest data directly to Delta Lake."""
     try:
         table = batch.to_arrow_table()
-        rows_count = len(table)
-
         storage = get_storage_backend("delta")
 
         write_kwargs = {"mode": mode}

@@ -5,10 +5,11 @@ import tempfile
 
 import pyarrow as pa
 import pytest
+from fastapi.testclient import TestClient
+
 from arrowport.api.app import app
 from arrowport.config.settings import Settings
 from arrowport.core.db import DuckDBManager
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture

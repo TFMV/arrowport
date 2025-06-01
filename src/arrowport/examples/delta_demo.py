@@ -1,7 +1,6 @@
 """Demo script for Delta Lake functionality in Arrowport."""
 
 import base64
-import json
 from datetime import datetime, timedelta
 
 import pyarrow as pa

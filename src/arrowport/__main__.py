@@ -1,7 +1,6 @@
 import threading
 
 import uvicorn
-
 from config.settings import settings
 from core.flight import start_flight_server
 
