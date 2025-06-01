@@ -1,7 +1,7 @@
 """FastAPI application for Arrowport."""
 
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import structlog
 from fastapi import FastAPI, HTTPException, Query
@@ -216,7 +216,7 @@ async def get_delta_table_info(table_name: str) -> DeltaTableInfo:
 async def get_delta_table_history(
     table_name: str,
     limit: int = Query(default=10, ge=1, le=100),
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """Get Delta Lake table history."""
     try:
         storage = get_storage_backend("delta")
@@ -256,7 +256,7 @@ async def get_delta_table_history(
 async def vacuum_delta_table(
     table_name: str,
     retention_hours: int = Query(default=168, ge=0),
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """Run vacuum on Delta Lake table."""
     try:
         storage = get_storage_backend("delta")
