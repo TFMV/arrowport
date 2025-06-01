@@ -1,12 +1,7 @@
-from pathlib import Path
-from typing import Optional, Dict
+from typing import Dict
 
 import structlog
-import yaml
 from pydantic import BaseModel, Field
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
-import dataclasses
 
 from ..models.arrow import ArrowStreamConfig
 
@@ -19,15 +14,6 @@ class StreamConfig(BaseModel):
     streams: dict[str, ArrowStreamConfig] = Field(
         default_factory=dict, description="Stream configurations keyed by stream name"
     )
-
-
-@dataclasses.dataclass
-class StreamConfig:
-    """Stream configuration."""
-
-    target_table: str
-    chunk_size: int = 10000
-    compression: Optional[Dict] = None
 
 
 class StreamConfigManager:

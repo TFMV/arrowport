@@ -1,7 +1,6 @@
 """Tests for Arrow IPC functionality."""
 
 import time
-from typing import Dict, List
 
 import duckdb
 import numpy as np

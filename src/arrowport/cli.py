@@ -72,7 +72,6 @@ def delta():
 def list():
     """List Delta Lake tables 📊"""
     try:
-        import os
         from pathlib import Path
 
         delta_path = Path(settings.delta_config.table_path)
@@ -174,7 +173,7 @@ def vacuum(table_name, retention_hours, dry_run):
 
         if not dry_run:
             result = storage.vacuum(table_name, retention_hours)
-            console.print(f"[green]Vacuum complete![/green]")
+            console.print("[green]Vacuum complete![/green]")
             console.print(f"Files removed: {result['files_removed']}")
             console.print(f"Files remaining: {result['files_remaining']}")
         else:
@@ -216,7 +215,7 @@ def restore(table_name, version):
 
         result = storage.restore(table_name, version)
 
-        console.print(f"[green]Restore complete![/green]")
+        console.print("[green]Restore complete![/green]")
         console.print(
             f"Restored from version {result['restored_from']} to version {result['restored_to']}"
         )

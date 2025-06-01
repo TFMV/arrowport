@@ -6,9 +6,8 @@ import socket
 import threading
 import time
 from collections.abc import Iterator
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional
 
-import pyarrow as pa
 import structlog
 from pyarrow import flight
 
