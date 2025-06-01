@@ -67,3 +67,4 @@ watchdog==6.0.0
     # via arrowport (pyproject.toml)
 zstandard==0.23.0
     # via arrowport (pyproject.toml)
+deltalake==1.0.1

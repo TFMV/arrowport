@@ -162,7 +162,6 @@ class DeltaLakeBackend(StorageBackend):
             mode=mode,
             partition_by=partition_by,
             schema_mode=schema_mode,
-            engine="rust",  # High-performance Rust engine
         )
 
         logger.info(
@@ -208,7 +207,9 @@ class DeltaLakeBackend(StorageBackend):
 
         # Get file statistics
         files = dt.files()
-
+        total_size_bytes = sum(
+            Path(f).stat().st_size for f in files if Path(f).exists()
+        )
         return {
             "backend": "delta",
             "table": target_table,
@@ -217,7 +218,7 @@ class DeltaLakeBackend(StorageBackend):
             "row_count": len(dt.to_pyarrow_table()),
             "history_count": len(history),
             "file_count": len(files),
-            "total_size_bytes": sum(f.get("size", 0) for f in files),
+            "total_size_bytes": total_size_bytes,
             "partitions": dt.metadata().partition_columns,
         }
 

@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arrowport"
+version = "0.1.0"
+description = "High-performance bridge from Arrow IPC streams to DuckDB"
+readme = "../../README.md"
+authors = [{ name = "TFMV", email = "mcgeehan@gmail.com" }]
+license = "MIT"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "duckdb>=1.3.0",
+    "pyarrow>=20.0.0",
+    "fastapi>=0.95.0",
+    "uvicorn>=0.20.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "structlog>=23.0.0",
+    "prometheus-client>=0.16.0",
+    "rich>=13.0.0",
+    "click>=8.0.0",
+    "PyYAML>=6.0.0",
+    "python-multipart>=0.0.5",
+    "zstandard>=0.20.0",
+    "lz4>=4.0.0",
+    "watchdog>=3.0.0",
+]
+
+[project.scripts]
+arrowport = "arrowport.cli:cli"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = [
+    "arrowport",
+    "arrowport.api",
+    "arrowport.config",
+    "arrowport.core",
+    "arrowport.docs",
+    "arrowport.models",
+    "arrowport.tests",
+    "arrowport.utils",
+]
+
+[tool.setuptools.package-data]
+"arrowport" = ["README.md", "LICENSE", "CONTRIBUTING.md"]
+"arrowport.docs" = ["*.md"]
