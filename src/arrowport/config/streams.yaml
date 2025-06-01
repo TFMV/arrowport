@@ -22,3 +22,33 @@ streams:
     compression:
       algorithm: zstd
       level: 1 # Faster compression for real-time data
+
+  # DuckDB example
+  lineitem:
+    target_table: lineitem_fact
+    storage_backend: duckdb
+    chunk_size: 122880 # Aligned with DuckDB row group size
+    compression:
+      algorithm: zstd
+      level: 3
+
+  # Delta Lake example with partitioning
+  events:
+    target_table: events
+    storage_backend: delta
+    chunk_size: 100000
+    delta_options:
+      partition_by: ["event_date", "event_type"]
+      z_order_by: ["user_id"]
+      target_file_size: 134217728 # 128MB
+      compression: snappy
+      schema_mode: merge # Allow schema evolution
+
+  # Hybrid example - can be overridden at runtime
+  sensors:
+    target_table: sensor_readings
+    # storage_backend not specified - uses default from settings
+    chunk_size: 50000
+    compression:
+      algorithm: lz4
+      level: 1 # Fast compression for real-time data

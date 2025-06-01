@@ -1,6 +1,20 @@
-
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class DeltaConfig(BaseModel):
+    """Delta Lake configuration settings."""
+
+    table_path: str = Field(
+        default="./delta_tables", description="Base path for Delta Lake tables"
+    )
+    version_retention_hours: int = Field(
+        default=168, description="Hours to retain old versions (default: 7 days)"
+    )
+    checkpoint_interval: int = Field(
+        default=10, description="Number of commits between checkpoints"
+    )
+    enable_cdc: bool = Field(default=False, description="Enable Change Data Capture")
 
 
 class Settings(BaseSettings):
@@ -10,6 +24,11 @@ class Settings(BaseSettings):
     api_host: str = Field(default="0.0.0.0", description="API host to bind to")
     api_port: int = Field(default=8888, description="API port to bind to")
 
+    # Storage Backend Settings
+    storage_backend: str = Field(
+        default="duckdb", description="Default storage backend (duckdb or delta)"
+    )
+
     # Flight Settings
     flight_port: int = Field(default=8889, description="Arrow Flight port to bind to")
     enable_flight: bool = Field(default=True, description="Enable Arrow Flight server")
@@ -17,6 +36,11 @@ class Settings(BaseSettings):
     # DuckDB Settings
     db_path: str = Field(
         default="arrowport.duckdb", description="Path to DuckDB database file"
+    )
+
+    # Delta Lake Settings
+    delta_config: DeltaConfig = Field(
+        default_factory=DeltaConfig, description="Delta Lake configuration"
     )
 
     # Compression Settings
