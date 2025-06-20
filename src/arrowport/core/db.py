@@ -13,10 +13,25 @@ logger = structlog.get_logger()
 class DuckDBManager:
     """DuckDB connection manager."""
 
-    def __init__(self, database: str = ":memory:") -> None:
-        """Initialize the DuckDB manager."""
+    def __init__(
+        self, database: str = ":memory:", *, db_path: str | None = None
+    ) -> None:
+        """Initialize the DuckDB manager.
+
+        Parameters
+        ----------
+        database:
+            Path to the DuckDB database. Alias ``db_path`` is kept for
+            backwards compatibility.
+        db_path:
+            Deprecated alias for ``database``.
+        """
+
+        if db_path is not None:
+            database = db_path
+
         self._database = database
-        self._conn = None
+        self._conn: duckdb.DuckDBPyConnection | None = None
 
     @contextlib.contextmanager
     def get_connection(self) -> Iterator[duckdb.DuckDBPyConnection]:
@@ -30,6 +45,9 @@ class DuckDBManager:
         except Exception as e:
             logger.error("DuckDB operation failed", error=str(e))
             raise
+
+    # Compatibility alias used by older code
+    connection = get_connection
 
     def close(self) -> None:
         """Close the DuckDB connection."""

@@ -164,5 +164,11 @@ def main():
         raise
 
 
+def start_flight_server(host: str = "0.0.0.0", port: int = 8889) -> None:
+    """Convenience wrapper used by ``arrowport.__main__``."""
+    server = FlightServer(host=host, port=port)
+    server.serve()
+
+
 if __name__ == "__main__":
     main()

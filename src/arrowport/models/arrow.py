@@ -80,6 +80,9 @@ class ArrowBatch(BaseModel):
     def to_arrow_table(self) -> pa.Table:
         """Convert the batch data to an Arrow table."""
         try:
+            schema_bytes = base64.b64decode(self.arrow_schema)
+            _ = pa.ipc.read_schema(pa.py_buffer(schema_bytes))
+
             data_bytes = base64.b64decode(self.data)
             reader = pa.ipc.open_stream(pa.py_buffer(data_bytes))
             table = reader.read_all()

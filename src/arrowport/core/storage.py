@@ -93,7 +93,7 @@ class DuckDBBackend(StorageBackend):
         self, target_table: str, columns: Optional[List[str]] = None, **kwargs
     ) -> pa.Table:
         """Read data from DuckDB."""
-        with db_manager.connection() as conn:
+        with db_manager.get_connection() as conn:
             if columns:
                 cols = ", ".join(columns)
                 query = f"SELECT {cols} FROM {target_table}"
@@ -104,7 +104,7 @@ class DuckDBBackend(StorageBackend):
 
     def table_exists(self, target_table: str) -> bool:
         """Check if table exists in DuckDB."""
-        with db_manager.connection() as conn:
+        with db_manager.get_connection() as conn:
             result = conn.execute(
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?",
                 [target_table],
@@ -113,7 +113,7 @@ class DuckDBBackend(StorageBackend):
 
     def get_table_info(self, target_table: str) -> Dict[str, Any]:
         """Get DuckDB table metadata."""
-        with db_manager.connection() as conn:
+        with db_manager.get_connection() as conn:
             # Get row count
             row_count = conn.execute(f"SELECT COUNT(*) FROM {target_table}").fetchone()[
                 0
