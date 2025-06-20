@@ -1,13 +1,13 @@
 import threading
 
 import uvicorn
-from config.settings import settings
-from core.flight import start_flight_server
+from arrowport.config.settings import settings
+from arrowport.core.flight import start_flight_server
 
 
 def run_flight_server():
     """Run the Arrow Flight server in a separate thread."""
-    start_flight_server()
+    start_flight_server(host=settings.api_host, port=settings.flight_port)
 
 
 def main() -> None:
@@ -19,7 +19,7 @@ def main() -> None:
 
     # Start FastAPI server
     uvicorn.run(
-        "api.app:app",
+        "arrowport.api.app:app",
         host=settings.api_host,
         port=settings.api_port,
         reload=True,  # Enable auto-reload during development
